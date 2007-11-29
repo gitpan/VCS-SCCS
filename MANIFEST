@@ -1,0 +1,13 @@
+ChangeLog
+MANIFEST
+Makefile.PL
+README
+SCCS.pm
+doc/sccsfile.4
+doc/sccsfile.man
+examples/sccs2git
+files/s.test.dta
+t/00_pod.t
+t/01_pod.t
+t/10_base.t
+META.yml                                 Module meta-data (added by MakeMaker)

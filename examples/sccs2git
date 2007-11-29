@@ -1,0 +1,16 @@
+#!/pro/bin/perl
+
+use strict;
+use warnings;
+
+use VCS::SCCS;
+
+my @sccs = glob ("SCCS/s.*")       or die "No SCCS source files to convert\n";
+
+mkdir ".git", 0777                 or die "Cannot create .git: $!\n";
+
+foreach my $f (@sccs) {
+    my $sccs = VCS::SCCS->new ($f) or die "Cannot convert $f\n";
+
+    # Do the git actions to put this file in git ...
+    }
