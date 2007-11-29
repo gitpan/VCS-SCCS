@@ -12,7 +12,7 @@ use DynaLoader ();
 use Carp;
 
 use vars   qw( $VERSION @ISA );
-$VERSION = "0.01";
+$VERSION = "0.03";
 @ISA     = qw( DynaLoader );
 
 ### ###########################################################################
@@ -369,6 +369,7 @@ VCS::SCCS - OO Interface to SCCS files
  my @body_70 = $sccs->body ();       # file.pl @70 list of chomped lines
  my @body_69 = $sccs->body (69);     # same for file.pl @96
  my @body_69 = $sccs->body ("5.38"); # same
+ -- NYI --
  my $diff = $sccs->diff (67);        # unified diff between rev 67 and 70
  my $diff = $sccs->diff (63, "5.37");# unified diff between rev 63 and 68
 
@@ -453,8 +454,8 @@ and robust VCSs, it is a read-only interface to the SCCS files.
 
 =head1 BUGS
 
-Only tested on our own repositories with perl-5.8.x-dor and
-perl-5.10.0
+Tested on our own repositories with perl-5.8.x-dor and perl-5.10.0. 
+It doesn't work with 5.6.2, and I don't see why.
 
 =head1 TODO
 

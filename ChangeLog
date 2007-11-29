@@ -1,3 +1,8 @@
+*** 0.03 Thu 29 Nov 2007 <h.m.brand@xs4all.nl>
+
+	- Require perl-5.8. 5.6.2 fails, and I have no idea why
+	  Chickening out, but I have no tuits to find out
+
 *** 0.02 Thu 29 Nov 2007 <h.m.brand@xs4all.nl>
 
 	- First real tests and incorporated feedback from Johan Vromans

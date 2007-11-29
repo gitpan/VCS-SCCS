@@ -2,7 +2,7 @@
 
 # Copyright PROCURA B.V. (c) 1999-2007 H.Merijn Brand
 
-require 5.006;
+require 5.008;
 
 use ExtUtils::MakeMaker;
 
