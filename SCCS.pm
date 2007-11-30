@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.05";
+$VERSION = "0.06";
 
 ### ###########################################################################
 
@@ -25,12 +25,15 @@ sub new
     # We can safely rule out "0" as a valid filename, ans 99.9999% of
     # SCCS source files start with s.
     my $fn = shift		or croak ("SCCS needs a valid file name");
+    -e $fn			or croak ("$fn does not exist");
+    -f $fn			or croak ("$fn is not a file");
+    -s $fn			or croak ("$fn is empty");
 
     open my $fh, "<", $fn	or croak ("Cannot open '$fn': $!");
 
     # Checksum
     # ^Ah checksum
-    <$fh> =~ m/^\cAh(\d+)$/	or croak ("SCCS file is supposed to start with a checksum");
+    <$fh> =~ m/^\cAh(\d+)$/	or croak ("SCCS file $fn is supposed to start with a checksum");
 
     my %sccs = (
 	file		=> $fn,
@@ -63,11 +66,12 @@ sub new
 	    @delta = split m/\n/, scalar <$fh>;
 	    }
 
-	my ($type, $vsn, $v_r, $v_l, $v_x, $y, $m, $d, $H, $M, $S, $user, $cur, $prv) =
+	my ($type, $vsn, $v_r, $v_l, $v_b, $v_s, $y, $m, $d, $H, $M, $S, $user, $cur, $prv) =
 	    (shift (@delta) =~ m{
 		\cAd				# Delta
 		\s+ ([DR])			# Type	Delta/Remove?
-		\s+ ((\d+)\.(\d+)(.\d[\d.]*)?)	# Vsn	%R%.%L%.%B%.%S%
+		\s+ ((\d+)\.(\d+)
+		     (?:\.(\d+)(?:\.(\d+))?)?)	# Vsn	%R%.%L%[.%B%[.%S%]]
 		\s+ (\d\d)/(\d\d)/(\d\d)	# Date	%E%
 		\s+ (\d\d):(\d\d):(\d\d)	# Time	%U%
 		\s+ (\S+)			# User
@@ -78,12 +82,12 @@ sub new
 	$y += $y < 70 ? 2000 : 1900; # SCCS is not Y2k safe!
 
 	# We do not have "R" entries
-	$type eq "R" and croak ("Delta type R has never been tested!");
+	$type eq "R" and warn ("Delta type R has never been tested!");
 
 	my @mr   = grep { s/^\cAm\s*// } @delta; # MR number(s)
 	my @cmnt = grep { s/^\cAc\s*// } @delta; # Comment
 
-	$sccs{current} ||= [ $cur, $vsn, $v_r, $v_l, $v_x ];
+	$sccs{current} ||= [ $cur, $vsn, $v_r, $v_l, $v_b, $v_s ];
 	$sccs{delta}{$cur} = {
 	    lines_ins	=> $l_ins,
 	    lines_del	=> $l_del,
@@ -94,7 +98,8 @@ sub new
 	    version	=> $vsn,
 	    v_r		=> $v_r,
 	    v_l		=> $v_l,
-	    v_x		=> $v_x,
+	    v_b		=> $v_b,
+	    v_s		=> $v_s,
 
 	    date	=> ($y * 100 + $m) * 100 + $d,
 	    time	=> ($H * 100 + $M) * 100 + $S,
@@ -127,15 +132,15 @@ sub new
     # Flags
     # ^Af q Project name
     # ^Af v ...
-    while (m/^\cAf \s+ (\S) \s* (.*)$/x) {
-	$sccs{flags}{$1} = defined $2 ? $2 : "";
+    while (m/^\cAf \s+ (\S) \s* (.+)?$/x) {
+	$sccs{flags}{$1} = $2;
 	$_ = <$fh>;
 	}
 
     # Comment
     # ^At comment
     while (s/^\cA[tT]\s*//) {
-	$sccs{comment} .= $_;
+	m/\S/ and $sccs{comment} .= $_;
 	$_ = <$fh>;
 	}
 
@@ -144,37 +149,37 @@ sub new
     $sccs{body} = [ split "\n", $_ . <$fh> ];
     close $fh;
 
-    bless \%sccs, $class;
+    return bless \%sccs, $class;
     } # new
 
 sub file
 {
     my $self = shift;
-    $self->{file};
+    return $self->{file};
     } # file
 
 sub checksum
 {
     my $self = shift;
-    $self->{checksum};
+    return $self->{checksum};
     } # checksum
 
 sub users
 {
     my $self = shift;
-    @{$self->{users}};
+    return @{$self->{users}};
     } # users
 
 sub flags
 {
     my $self = shift;
-    { %{$self->{flags}} };
+    return { %{$self->{flags}} };
     } # flags
 
 sub comment
 {
     my $self = shift;
-    $self->{comment};
+    return $self->{comment};
     } # comment
 
 sub current
@@ -199,12 +204,14 @@ sub version
     $self->{current} or return undef;
 
     # $self->version () returns most recent version
-    my @args = @_ or return $self->{current}[1];
+    my @args = @_       or return $self->{current}[1];
+    my $rev  = $args[0] or return $self->{current}[1];
 
-    my $rev = $args[0];
     # $self->revision (12) returns version for that revision
     @args == 1 && exists $self->{delta}{$rev} and
 	return $self->{delta}{$rev}{version};
+
+    return undef;
     } # version
 
 sub revision
@@ -214,12 +221,14 @@ sub revision
     $self->{current} or return undef;
 
     # $self->revision () returns most recent revision
-    my @args = @_ or return $self->{current}[0];
+    my @args = @_       or return $self->{current}[0];
+    my $vsn  = $args[0] or return $self->{current}[0];
 
-    my $vsn = $args[0];
     # $self->revision (12) returns version for that revision
     @args == 1 && exists $self->{vsn}{$vsn} and
 	return $self->{vsn}{$vsn};
+
+    return undef;
     } # revision
 
 sub revision_map
@@ -228,7 +237,7 @@ sub revision_map
 
     $self->{current} or return undef;
 
-    [ map { [ $_ => $self->{delta}{$_}{version} ] }
+    return [ map { [ $_ => $self->{delta}{$_}{version} ] }
 	sort { $a <=> $b }
 	    keys %{$self->{delta}} ];
     } # revision
@@ -324,11 +333,14 @@ sub body
 	    $w = (grep { $_->[0] == 0 } @lvl) ? 0 : 1;
 	    next;
 	    }
-	m/^\cA(.*)/ and croak "Unsupported SCCS control: ^A$1";
+	if (m/^\cA(.*)/) {
+	    warn "Unsupported SCCS control: ^A$1, line skipped";
+	    next;
+	    }
 	$w and push @body, $_;
 #	printf STDERR "%2d.%04d/%s: %-29.29s |%s\n", $r, scalar @body, $w, $v->(), $_;
 	}
-    wantarray ? @body : join "\n", @body, "";
+    return wantarray ? @body : join "\n", @body, "";
     } # body
 
 1;
@@ -393,19 +405,114 @@ subversion.
 
 =over 4
 
-=item new
+=item new (<file>)
+
+The constructor only accepts a single argument: the SCCS file. this will
+typically be something like C<SCCS/s.file.c>.
+
+If anything in that file makes C<new ()> believe that it is not a SCCS
+file, it will return undef. In this stage, there is no way yet to tell
+why C<new ()> failed.
 
 =item file
 
+Returns the name of the parsed file. Useful if you have more than a
+single $sccs object.
+
 =item checksum
+
+Returns the checksum that was stored in the file. This module does not
+check if it is valid, nor does it have functionality to calculate a new
+checksum.
 
 =item users
 
+Returns the list of users that was recorded in this file as authorized
+to make deltas/changes.
+
 =item flags
+
+Returns a hash of the flags set for this file (if set at all). VCS::SCCS
+does not do anything with these flags. They are here for the end-user only.
+
+Note that not all flags are supported by all versions of C<admin>, like
+C<x> is supported on HP-UX, but not in CSSC.
+
+=over 4
+
+=item t <type of program>
+
+File has a user defined value for the %Y% keyword.
+
+=item v [<program name>]
+
+File was flagged to prompt for MR (using <program name> for validation).
+
+=item i <keyword string>
+
+File was flagged to require id keywords.
+
+=item b
+
+File was allowed to pass -b to get to create branch deltas.
+
+=item m <module name>
+
+File has a user defined value for the %M% keyword.
+
+=item f <floor>
+
+File was given a floor: the lowest release, a number from 1 to 9998, which
+may be get for editing.
+
+=item c <ceiling>
+
+File was given a ceiling: a number less than or equal to 9999, which can
+be retrieved by a get command.
+
+=item d <default sid>
+
+File was given a default delta number SID.
+
+=item n
+
+File created null deltas for skipped major versions.
+
+=item j
+
+File was flagged to allow concurrent edits on the same SID.
+
+=item l <lock releases>
+
+File was given a list of releases to which deltas can no longer be made.
+
+=item q <user defined text>
+
+File has a user defined value for the %Q% keyword.
+
+=item x
+
+File was flagged to set execution bit on get.
+
+=item z <reserved for use in interfaces>
+
+File was flagged to set execution bit on get.
+
+=back
 
 =item comment
 
+The comment that was added when the file was created.
+
 =item current
+
+In scalar context returns the current revision number. That is the
+number of the file that would be restored by get with no arguments.
+
+In list context, it returns the current revision, version and parts
+of the version, something like C<(70, "5.39", 5, 39, undef, undef)>.
+The last 4 numbers are the equivalent of the keywords %R%, %L%, %B%,
+and %S% for that release.
 
 =back
 
@@ -415,11 +522,32 @@ subversion.
 
 =item delta
 
+NYI
+
 =item version
+=item version (<revision>)
+
+If called without argument, it returns the last version, just as
+the second return value of C<current ()> in list context.
+
+If called with a revision argument, it returns you the version that
+matches that revision. It returns undef if no matching version is
+found.
 
 =item revision
+=item revision (<version>)
+
+If called without argument, it returns the last revision, just as
+C<current ()> returns in scalar context.
+
+If called with a version argument, it returns you the revision that
+matches that version. It returns undef if no matching revision is
+found.
 
 =item revision_map
+
+Returns an anonymous list of C<revision> - C<version> pairs (in
+anonymous lists).
 
 =back
 
@@ -428,10 +556,30 @@ subversion.
 =over 4
 
 =item body
+=item body (<revision>)
+=item body (<version>)
+
+In scalar context returns the full body for the given revision.
+If no revision is passed, the current (most recent) revision is
+used. If a version is passed, the matching revision will be used.
+If the is no matching version or revision, C<body ()> returns
+C<undef>.
+
+In list context, C<body ()> returns the list of chomped lines for
+the given revision.
 
 =item diff
 
+NYI
+
 =item translate_keywords
+
+NYI
+
+plan is to accept either a single string, like "CVS", or "RCS" and
+translate the SCCS keywords to the corresponding CVS or RCS keywords
+(if possible), or to accept a hash that defines a translation table
+and have VCS::SCCS fill in the missing entries with defaults.
 
 =back
 
@@ -456,7 +604,8 @@ Tested on our own repositories with perl-5.8.x-dor and perl-5.10.0.
 
 =head1 TODO
 
-* document the methods
+* improve documentation
+* implement delta () and diff ()
 * more tests
 * sccs2rcs
 * sccs2cvs
@@ -464,10 +613,11 @@ Tested on our own repositories with perl-5.8.x-dor and perl-5.10.0.
 * sccs2hg
 * sccs2svn
 * errors and warnings
+* provide hooks to VCS::
 
 =head1 DIAGNOSTICS
 
-First errors, than disgnostics ...
+First errors, than diagnostics ...
 
 =head1 SEE ALSO
 
@@ -479,6 +629,8 @@ written in c++ and therefor disqualifies to be used at any older OS
 that does support SCCS but has no C++ compiler. And even if you have
 one, there is a good chance it won't build or does not bass the basic
 tests. I didn't get it to work.
+
+VCS - http://search.cpan.org/dist/VCS
 
 =head1 AUTHOR
 

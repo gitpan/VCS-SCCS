@@ -1,3 +1,8 @@
+*** 0.06 Fri 30 Nov 2007 <h.m.brand@xs4all.nl>
+
+	- Basic documentation
+	- Basic tests for implemented functionality (Devel::Cover++)
+
 *** 0.05 Fri 30 Nov 2007 <h.m.brand@xs4all.nl>
 
 	- In testing 0.03, I accidentally remove the requirement for 5.006
