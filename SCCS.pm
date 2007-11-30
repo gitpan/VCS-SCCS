@@ -4,16 +4,14 @@
 
 package VCS::SCCS;
 
-use warnings;
 use strict;
+use warnings;
 
 use POSIX  qw(mktime);
-use DynaLoader ();
 use Carp;
 
-use vars   qw( $VERSION @ISA );
-$VERSION = "0.03";
-@ISA     = qw( DynaLoader );
+use vars qw( $VERSION );
+$VERSION = "0.04";
 
 ### ###########################################################################
 
@@ -130,7 +128,7 @@ sub new
     # ^Af q Project name
     # ^Af v ...
     while (m/^\cAf \s+ (\S) \s* (.*)$/x) {
-	$sccs{flags}{$1} = $2 // "";
+	$sccs{flags}{$1} = defined $2 ? $2 : "";
 	$_ = <$fh>;
 	}
 
