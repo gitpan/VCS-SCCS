@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.04";
+$VERSION = "0.05";
 
 ### ###########################################################################
 
@@ -453,11 +453,11 @@ and robust VCSs, it is a read-only interface to the SCCS files.
 =head1 BUGS
 
 Tested on our own repositories with perl-5.8.x-dor and perl-5.10.0. 
-It doesn't work with 5.6.2, and I don't see why.
 
 =head1 TODO
 
-* tests
+* document the methods
+* more tests
 * sccs2rcs
 * sccs2cvs
 * sccs2git

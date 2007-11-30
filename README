@@ -11,9 +11,7 @@ DESCRIPTION
     VCSs like git, Mercurial, or subversion.
 
 PREREQUISITES
-    perl-5.8.x
-    feel free to send me the patch to make it work under 5.6, I
-    didn't see what was wrong.
+    perl-5.6.x
 
 BUILDING AND INSTALLATION
     As all CPAN modules:

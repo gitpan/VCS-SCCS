@@ -1,3 +1,8 @@
+*** 0.05 Fri 30 Nov 2007 <h.m.brand@xs4all.nl>
+
+	- In testing 0.03, I accidentally remove the requirement for 5.006
+	- Lifted the 5.8 requirement in README
+
 *** 0.04 Fri 30 Nov 2007 <h.m.brand@xs4all.nl>
 
 	- Remove the last remains of the needless refs to Dynaloader
