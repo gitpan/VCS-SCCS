@@ -13,6 +13,9 @@ DESCRIPTION
 PREREQUISITES
     perl-5.6.x
 
+    Tested on our own repositories with perl version 5.6.2, 5.8.x-dor
+    and 5.10.0. 
+
 BUILDING AND INSTALLATION
     As all CPAN modules:
 	# perl Makefile.PL

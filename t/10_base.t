@@ -4,18 +4,19 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-#use Test::More "no_plan";
-use Test::More tests => 71;
+use Test::More "no_plan";
+#use Test::More tests => 75;
 
 BEGIN {
     use_ok ("VCS::SCCS");
     }
 
-like (VCS::SCCS->version (), qr{^\d+\.\d+$},	"Module version");
+like (VCS::SCCS::version (),  qr{^\d+\.\d+$},	"Module version");
+like (VCS::SCCS->version (),  qr{^\d+\.\d+$},	"Module version");
 
 my $sccs;
 
-my $testfile = "files/s.test.dta";
+my $testfile = "files/s.base.dta";
 
 sub e_is
 {
@@ -29,21 +30,21 @@ sub e_is
 ok (1, "Constructor");
     open my $empty, ">", "s.empty.c";
 e_is (qr{needs a valid file name});
-e_is (qr{needs a valid file name},	undef);
-e_is (qr{needs a valid file name},	"");
-e_is (qr{does not exist},		"xxxxx");
-e_is (qr{is empty},			"s.empty.c");
+e_is (qr{needs a valid file name},		undef);
+e_is (qr{needs a valid file name},		"");
+e_is (qr{does not exist},			"xxxxx");
+e_is (qr{is empty},				"s.empty.c");
     print $empty "Not anymore\n";
     close $empty;
-    chmod 0000, "s.empty.c";
-e_is (qr{Cannot open},			"s.empty.c");
+    chmod 0000, "s.empty.c";	# Might not be effective on Win32 or cygwin!
+e_is (qr{Cannot open|start with a checksum},	"s.empty.c");
     unlink "s.empty.c";
-e_is (qr{is not a file},		"/dev/null");
-e_is (qr{is not a file},		"files");
-e_is (qr{start with a checksum},	"Makefile");
+e_is (qr{is not a file},			"/dev/null");
+e_is (qr{is not a file},			"files");
+e_is (qr{start with a checksum},		"Makefile");
 
 ok (1, "Parsing");
-ok ($sccs = VCS::SCCS->new ("files/s.test.dta"), "Read and parse large SCCS file");
+ok ($sccs = VCS::SCCS->new ($testfile), "Read and parse large SCCS file");
 
 ok (1, "Metadata");
 is ($sccs->file (),		$testfile,	"->file ()");
@@ -67,6 +68,20 @@ is ($sccs->revision (""),	70,		"->revision ('')");
 is ($sccs->revision ("5.38"),	69,		"->revision ('5.38')");
 is ($sccs->revision ("9.99"),	undef,		"->revision ('9.99')");
 is ($sccs->revision ("5.38",0),	undef,		"->revision ('5.38', 0)");
+
+my $delta;
+ok ($delta = $sccs->delta,			"->delta ()");
+is ($delta->{version},		"5.39",		"  {version}");
+is ($delta->{release},		5,		"  {release}");
+is ($delta->{level},		39,		"  {level}");
+is ($delta->{branch},		undef,		"  {branch}");
+is ($delta->{sequence},		undef,		"  {sequence}");
+is ($delta->{date},		"07/11/09",	"  {date}");
+ok ($delta = $sccs->delta (2),			"->delta (2)");
+is ($delta->{version},		"4.2",		"  {version}");
+ok ($delta = $sccs->delta ("4.3"),		"->delta ('4.3')");
+is ($delta->{date},		"98/02/06",	"  {date}");
+is ($delta = $sccs->delta (99),	undef,		"->delta (99)");
 
 my $f;
 ok ($f = $sccs->flags (),			"->flags ()");

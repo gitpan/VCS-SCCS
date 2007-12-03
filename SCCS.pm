@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.06";
+$VERSION = "0.07";
 
 ### ###########################################################################
 
@@ -35,8 +35,9 @@ sub new
     # ^Ah checksum
     <$fh> =~ m/^\cAh(\d+)$/	or croak ("SCCS file $fn is supposed to start with a checksum");
 
+    (my $filename = $fn) =~ s{\bSCCS/s\.(?=[^/]+$)}{};
     my %sccs = (
-	file		=> $fn,
+	file		=> $filename,
 
 	checksum	=> $1,
 	delta		=> {},
@@ -47,6 +48,8 @@ sub new
 
 	current		=> undef,
 	vsn		=> {},	# version to revision map
+
+	tran		=> undef,
 	);
 
     # Delta's At least one! ^A[ixg] ignored
@@ -66,14 +69,16 @@ sub new
 	    @delta = split m/\n/, scalar <$fh>;
 	    }
 
-	my ($type, $vsn, $v_r, $v_l, $v_b, $v_s, $y, $m, $d, $H, $M, $S, $user, $cur, $prv) =
+	my ($type, $vsn, $v_r, $v_l, $v_b, $v_s,
+		   $date, $y, $m, $d, $time, $H, $M, $S,
+		   $user, $cur, $prv) =
 	    (shift (@delta) =~ m{
 		\cAd				# Delta
 		\s+ ([DR])			# Type	Delta/Remove?
 		\s+ ((\d+)\.(\d+)
 		     (?:\.(\d+)(?:\.(\d+))?)?)	# Vsn	%R%.%L%[.%B%[.%S%]]
-		\s+ (\d\d)/(\d\d)/(\d\d)	# Date	%E%
-		\s+ (\d\d):(\d\d):(\d\d)	# Time	%U%
+		\s+ ((\d\d)/(\d\d)/(\d\d))	# Date	%E%
+		\s+ ((\d\d):(\d\d):(\d\d))	# Time	%U%
 		\s+ (\S+)			# User
 		\s+ (\d+)			# current rev
 		\s+ (\d+)			# new     rev
@@ -95,22 +100,20 @@ sub new
 
 	    type	=> $type,
 
-	    version	=> $vsn,
-	    v_r		=> $v_r,
-	    v_l		=> $v_l,
-	    v_b		=> $v_b,
-	    v_s		=> $v_s,
+	    version	=> $vsn,	# %I%
+	    release	=> $v_r,	# %R%
+	    level	=> $v_l,	# %L%
+	    branch	=> $v_b,	# %B%
+	    sequence	=> $v_s,	# %S%
 
-	    date	=> ($y * 100 + $m) * 100 + $d,
-	    time	=> ($H * 100 + $M) * 100 + $S,
+	    date	=> $date,	# %E%
+	    time	=> $time,	# %U%
 	    stamp	=> mktime ($S, $M, $H, $d, $m - 1, $y - 1900, -1, -1, -1),
 
-	    comitter	=> $user,
+	    committer	=> $user,
 
 	    mr		=> join (", ", @mr),
 	    comment	=> join ("\n", @cmnt),
-
-	    prev	=> $prv,
 	    };
 	$sccs{vsn}{$vsn} = $cur;
 	$_ = <$fh>;
@@ -185,23 +188,35 @@ sub comment
 sub current
 {
     my $self = shift;
-    $self->{current} or return undef;
+    $self->{current} or return;
     wantarray ? @{$self->{current}} : $self->{current}[0];
     } # current
 
 sub delta
 {
     my $self = shift;
+    $self->{current} or return;
+    my $rev;
+    if (@_ == 0) {
+	$rev = $self->{current}[0];
+	}
+    elsif (exists $self->{delta}{$_[0]}) {
+	$rev = $_[0];
+	}
+    elsif (exists $self->{vsn}{$_[0]}) {
+	$rev = $self->{vsn}{$_[0]};
+	}
+    else {
+	return;
+	}
+    return { %{ $self->{delta}{$rev} } };
     } # delta
 
 sub version
 {
     my $self = shift;
-    unless ($self && ref $self) {
-	return $VERSION;
-	}
-
-    $self->{current} or return undef;
+    ref $self eq __PACKAGE__ or return $VERSION;
+    $self->{current}         or return;
 
     # $self->version () returns most recent version
     my @args = @_       or return $self->{current}[1];
@@ -211,14 +226,13 @@ sub version
     @args == 1 && exists $self->{delta}{$rev} and
 	return $self->{delta}{$rev}{version};
 
-    return undef;
+    return;
     } # version
 
 sub revision
 {
     my $self = shift;
-
-    $self->{current} or return undef;
+    $self->{current} or return;
 
     # $self->revision () returns most recent revision
     my @args = @_       or return $self->{current}[0];
@@ -228,41 +242,98 @@ sub revision
     @args == 1 && exists $self->{vsn}{$vsn} and
 	return $self->{vsn}{$vsn};
 
-    return undef;
+    return;
     } # revision
 
 sub revision_map
 {
     my $self = shift;
-
-    $self->{current} or return undef;
+    $self->{current} or return;
 
     return [ map { [ $_ => $self->{delta}{$_}{version} ] }
 	sort { $a <=> $b }
 	    keys %{$self->{delta}} ];
     } # revision
 
-sub translate_keywords
+my %tran = (
+    SCCS	=> {	# Ducumentation only
+	"%W%"				=> "%Z%%M%\t%I%",
+	"%I%"				=> "%R%.%L%.%B%.%S%",
+	},
+    RCS		=> {
+	"%W%[ \t]*%G%"			=> '$""Id""$',
+	"%W%[ \t]*%E%"			=> '$""Id""$',
+	"%W%"				=> '$""Id""$',
+	"%Z%%M%[ \t]*%I%[ \t]*%G%"	=> '$""SunId""$',
+	"%Z%%M%[ \t]*%I%[ \t]*%E%"	=> '$""SunId""$',
+	"%M%[ \t]*%I%[ \t]*%G%"		=> '$""Id""$',
+	"%M%[ \t]*%I%[ \t]*%E%"		=> '$""Id""$',
+	"%M%"				=> '$""RCSfile""$',
+	"%I%"				=> '$""Revision""$',
+	"%G%"				=> '$""Date""$',
+	"%E%"				=> '$""Date""$',
+	"%U%"				=> '',
+	},
+    );
+
+sub set_translate
 {
-    # '%W%[ \t]*%G%'	=>			"$""Id""$"),
-    # '%W%[ \t]*%E%'	=>			"$""Id""$"),
-    # '%W%'	=>				"$""Id""$"),
-    # '%Z%%M%[ \t]*%I%[ \t]*%G%'	=>	"$""SunId""$"),
-    # '%Z%%M%[ \t]*%I%[ \t]*%E%'	=>	"$""SunId""$"),
-    # '%M%[ \t]*%I%[ \t]*%G%'	=>		"$""Id""$"),
-    # '%M%[ \t]*%I%[ \t]*%E%'	=>		"$""Id""$"),
-    # '%M%'	=>				"$""RCSfile""$"),
-    # '%I%'	=>				"$""Revision""$"),
-    # '%G%'	=>				"$""Date""$"),
-    # '%E%'	=>				"$""Date""$"),
-    # '%U%'	=>				""),
-    } # translate_keywords
+    my ($self, $type) = @_;
+
+    if (ref $type eq "HASH") {
+	$self->{tran} = "CUSTOM";
+	$tran{CUSTOM} = $type;
+	}
+    elsif (exists $tran{uc $type}) {
+	$self->{tran} = uc $type;
+	}
+    else {
+	$self->{tran} = undef;
+	}
+    } # set_translate
+
+sub _tran
+{
+    my ($self, $line) = @_;
+    my $tt = $self->{tran} or return $line;
+    my $tr = $tran{$tt}    or return $line;
+    my $re = $tr->{re};
+    $line =~ s{($re)}{$tr->{$1}}g;
+    return $line;
+    } # _tran
+
+sub translate
+{
+    my ($self, $rev, $line) = @_;
+
+    my $type = $self->{tran}    or return $line;
+    exists $self->{delta}{$rev} or return $line;
+    
+    my %delta = %{$self->delta ($rev)};
+    my $I = join ".", grep { defined $_ } @delta{qw(release level branch sequence)};
+    $tran{SCCS}{"%U%"} = $delta{"time"};
+    $tran{SCCS}{"%E%"} = $delta{"date"};
+    $tran{SCCS}{"%R%"} = $delta{"release"};
+    $tran{SCCS}{"%L%"} = $delta{"level"};
+    $tran{SCCS}{"%B%"} = $delta{"branch"};
+    $tran{SCCS}{"%S%"} = $delta{"sequence"};
+    $tran{SCCS}{"%I%"} = $I;
+    $tran{SCCS}{"%W%"} = $I;
+	#"%W%"				=> "%Z%%M%\t%I%",
+
+    unless (exists $tran{$type}{re}) {
+	my $kw = join "|", reverse sort keys %{$tran{$type}};
+	$tran{$type}{re} = $kw ? qr{$kw} : undef;
+	}
+
+    return $self->_tran ($line);
+    } # translate
 
 sub body
 {
     my $self = shift;
 
-    $self->{body} && $self->{current} or return undef;
+    $self->{body} && $self->{current} or return;
     my $r = shift || $self->{current}[0];
 
     exists $self->{vsn}{$r} and $r = $self->{vsn}{$r};
@@ -273,6 +344,8 @@ sub body
 #   my $v = sub {
 #	join " ", map { sprintf "%s:%02d", $_->[1], $_->[2] } @lvl[1..$#lvl];
 #	}; # v
+
+    $self->translate ($r, "");	# Initialize translate hash
 
     my $w = 1;
     for (@{$self->{body}}) {
@@ -337,7 +410,7 @@ sub body
 	    warn "Unsupported SCCS control: ^A$1, line skipped";
 	    next;
 	    }
-	$w and push @body, $_;
+	$w and push @body, $self->_tran ($_);
 #	printf STDERR "%2d.%04d/%s: %-29.29s |%s\n", $r, scalar @body, $w, $v->(), $_;
 	}
     return wantarray ? @body : join "\n", @body, "";
@@ -514,6 +587,14 @@ of the version, something like C<(70, "5.39", 5, 39, undef, undef)>.
 The last 4 numbers are the equivalent of the keywords %R%, %L%, %B%,
 and %S% for that release.
 
+=item set_translate (<type>)
+
+By default VCS::SCCS will not translate the SCCS keywords (like C<%W%>),
+see C<translate ()> for the full list. With C<set_translate ()>, you
+can select a translation type: C<SCCS> and C<RCS> are currently the
+only supported types, C<CVS> and C<GIT> are planned. Passing a false
+argument will reset translation to none.
+
 =back
 
 =head2 Delta functions
@@ -521,8 +602,84 @@ and %S% for that release.
 =over 4
 
 =item delta
+=item delta (<revision>)
+=item delta (<version>)
 
-NYI
+If called without argument, it returns the delta of the last revision
+as a hashref.
+
+If called with a revision argument, it returns you the delta of that
+revision. If there is no such revision, returns undef.
+
+If called with a version argument, it returns you the delta of that
+version. If there is no such version, returns undef.
+
+The elements of the hash returned are:
+
+=over 4
+
+=item lines_ins
+
+The number of lines inserted in this delta
+
+=item lines_del
+
+The number of lines deleted in this delta
+
+=item lines_unc
+
+The number of lines unchanged in this delta
+
+=item type
+
+The type of this delta. Usually this will be a C<D>, but it could
+also be a C<R>, which has not (yet) been tested.
+
+=item version
+
+The version (SID) of this delta
+
+=item release
+
+The release number of this delta
+
+=item level
+
+The level number of this delta
+
+=item branch
+
+The branch number of this delta. Can be undef
+
+=item sequence
+
+The sequence number of this delta. Can be undef
+
+=item date
+
+The date this delta was submitted in YY/MM/DD format
+
+=item time
+
+The time this delta was submitted in HH:MM:SS format
+
+=item stamp
+
+The C<date> and C<time> elements converted to a unix time stamp
+
+=item committer
+
+The logname of the user that committed this delta
+
+=item mr
+
+The MR numbers of this delta, separated by ", "
+
+=item comment
+
+The comment as entered with this delta
+
+=back
 
 =item version
 =item version (<revision>)
@@ -568,18 +725,108 @@ C<undef>.
 In list context, C<body ()> returns the list of chomped lines for
 the given revision.
 
+C<body ()> will use the translation set by C<set_translate ()>.
+
 =item diff
 
 NYI
 
-=item translate_keywords
+=item translate (<revision>, <text>)
 
-NYI
+Translate the SCCS keywords in the text passed using the plan set
+with C<set_translate ()>.
 
-plan is to accept either a single string, like "CVS", or "RCS" and
-translate the SCCS keywords to the corresponding CVS or RCS keywords
-(if possible), or to accept a hash that defines a translation table
-and have VCS::SCCS fill in the missing entries with defaults.
+The SCCS keywords are
+
+=over 4
+
+=item %M%
+
+Module name: either the value of the m flag in the file (see C<flags>),
+or if absent, the name of the SCCS file with the leading s. removed.
+
+=item %I%
+
+SCCS identification (SID) (%R%.%L%.%B%.%S%) of the retrieved text.
+
+=item %R%
+
+Release.
+
+=item %L%
+
+Level.
+
+=item %B%
+
+Branch.
+
+=item %S%
+
+Sequence.
+
+=item %D%
+
+Current date (YY/MM/DD).
+
+=item %H%
+
+Current date (MM/DD/YY).
+
+=item %T%
+
+Current time (HH:MM:SS).
+
+=item %E%
+
+Date newest applied delta was created (YY/MM/DD).
+
+=item %G%
+
+Date newest applied delta was created (MM/DD/YY).
+
+=item %U%
+
+Time newest applied delta was created (HH:MM:SS).
+
+=item %Y%
+
+Module type: value of the t flag in the SCCS file (see C<flags>).
+
+=item %F%
+
+SCCS file name.
+
+=item %P%
+
+Fully qualified SCCS file name.
+
+=item %Q%
+
+The value of the q flag in the file (see C<flags>).
+
+=item %C%
+
+Current line number.  This keyword is intended for identifying messages
+output by the program such as --this should not have happened-- type
+errors.  It is not intended to be used on every line to provide sequence
+numbers.
+
+=item %Z%
+
+The 4-character string @(#) @(#) recognizable by what (see what(1)).
+
+=item %W%
+
+A shorthand notation for constructing what(1) strings for HP?UX system
+program files.  %W%=%Z%%M%horizontal-tab%I%
+
+=item %A%
+
+Another shorthand notation for constructing what(1) strings for
+non-HP-UX system program files.  %A% = %Z%%Y% %M% %I%%Z%
+
+=back
 
 =back
 
@@ -598,22 +845,18 @@ other VCSs
 As this module is created as a base for conversion to more useful
 and robust VCSs, it is a read-only interface to the SCCS files.
 
-=head1 BUGS
-
-Tested on our own repositories with perl-5.8.x-dor and perl-5.10.0. 
-
 =head1 TODO
 
-* improve documentation
-* implement delta () and diff ()
-* more tests
-* sccs2rcs
-* sccs2cvs
-* sccs2git
-* sccs2hg
-* sccs2svn
-* errors and warnings
-* provide hooks to VCS::
+ * improve documentation
+ * implement delta () and diff ()
+ * more tests
+ * sccs2rcs
+ * sccs2cvs
+ * sccs2git
+ * sccs2hg
+ * sccs2svn
+ * errors and warnings
+ * provide hooks to VCS::
 
 =head1 DIAGNOSTICS
 

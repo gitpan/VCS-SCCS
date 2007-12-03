@@ -1,3 +1,12 @@
+*** 0.07 Mon 03 Dec 2007 <h.m.brand@xs4all.nl>
+
+	- Test suite assumed chmod 0000, file to work on windows and cygwin
+	- Added docs for SCCS keywords
+	- Added keyword translations (currently only SCCS and custom)
+	- Added tests for keyword translations
+	- Implemented delta () method
+	- Documented much more
+
 *** 0.06 Fri 30 Nov 2007 <h.m.brand@xs4all.nl>
 
 	- Basic documentation
