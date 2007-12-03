@@ -3,9 +3,8 @@
 use strict;
 use warnings;
 
-use Data::Dumper;
-use Test::More "no_plan";
-#use Test::More tests => 75;
+#use Test::More "no_plan";
+use Test::More tests => 30;
 
 BEGIN {
     use_ok ("VCS::SCCS");
@@ -15,21 +14,21 @@ like (VCS::SCCS->version (), qr{^\d+\.\d+$},	"Module version");
 
 my $sccs;
 
-my $testfile = "files/s.tran.dta";
+my $testfile = "files/SCCS/s.tran.dta";
 
 ok (1, "Parsing");
 ok ($sccs = VCS::SCCS->new ($testfile), "Read and parse large SCCS file");
 
-is (length ($sccs->body ()),		41,	"->body ()      scalar");
-is (length ($sccs->body (0)),		41,	"->body (0)     scalar");
-is (length ($sccs->body ("")),		41,	"->body ('')    scalar");
-is (length ($sccs->body (2)),		41,	"->body (2)     scalar");
-is (length ($sccs->body ("1.1")),	25,	"->body ('1.1') scalar");
+is (length ($sccs->body ()),		41,	"body ()      scalar");
+is (length ($sccs->body (0)),		41,	"body (0)     scalar");
+is (length ($sccs->body ("")),		41,	"body ('')    scalar");
+is (length ($sccs->body (2)),		41,	"body (2)     scalar");
+is (length ($sccs->body ("1.1")),	25,	"body ('1.1') scalar");
 
 my @body;
-ok (@body = $sccs->body (),			"->body ()      list");
+ok (@body = $sccs->body (),			"body ()      list");
 is (scalar @body,			2,	".. 2 lines");
-ok (@body = $sccs->body ("1.1"),		"->body ('1.1') list");
+ok (@body = $sccs->body ("1.1"),		"body ('1.1') list");
 is (scalar @body,			1,	".. 1 line");
 
 is ($sccs->translate (2, "%E%"), "%E%", "translate '' %E% 2");
@@ -49,7 +48,7 @@ is ($sccs->translate (2, "%U%"), "02:02:02", "translate SCCS %U% 2");
 is ($sccs->translate (1, "%U%"), "01:01:01", "translate SCCS %U% 1");
 is ($sccs->translate (2, "%E%R%U%"),
 			 "07/12/01R02:02:02", "translate SCCS %U%R%E% 2");
-is (length ($sccs->body (2)),		46,	"->body (2)     scalar");
+is (length ($sccs->body (2)),		46,	"body (2)     scalar");
 
 $sccs->set_translate ("RCS");
 #is ($sccs->translate (2, "%E%"), "%E%", "translate 'RCS' %E% 2");

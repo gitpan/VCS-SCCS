@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.07";
+$VERSION = "0.08";
 
 ### ###########################################################################
 
@@ -28,6 +28,7 @@ sub new
     -e $fn			or croak ("$fn does not exist");
     -f $fn			or croak ("$fn is not a file");
     -s $fn			or croak ("$fn is empty");
+    (my $filename = $fn) =~ s{\bSCCS/s\.(?=[^/]+$)}{};
 
     open my $fh, "<", $fn	or croak ("Cannot open '$fn': $!");
 
@@ -35,7 +36,6 @@ sub new
     # ^Ah checksum
     <$fh> =~ m/^\cAh(\d+)$/	or croak ("SCCS file $fn is supposed to start with a checksum");
 
-    (my $filename = $fn) =~ s{\bSCCS/s\.(?=[^/]+$)}{};
     my %sccs = (
 	file		=> $filename,
 

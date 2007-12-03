@@ -7,10 +7,45 @@ use VCS::SCCS;
 
 my @sccs = glob ("SCCS/s.*")       or die "No SCCS source files to convert\n";
 
-mkdir ".git", 0777                 or die "Cannot create .git: $!\n";
+-d ".git" and die ".git already exists\n";
+system "git init";
+
+sub pr_date
+{
+    my @dt = localtime shift;
+    sprintf "%s %02d-%02d-%4d %02d:%02d:%02d",
+	(qw( Sun Mon Tue Wed Thu Fri Sat ))[$dt[6]],
+	$dt[3], $dt[4] + 1, $dt[5] + 1900,
+	$dt[2], $dt[1], $dt[0];
+    } # pr_date
 
 foreach my $f (@sccs) {
     my $sccs = VCS::SCCS->new ($f) or die "Cannot convert $f\n";
 
-    # Do the git actions to put this file in git ...
+    # GIT supports get-hooks, to translate on retrieval
+    # $sccs->set_translate ("git");
+
+    my $fn = $sccs->file ();
+    my $added = 0;
+    foreach my $rm (@{$sccs->revision_map ()}) {
+	my ($rev, $vsn) = @{$rm};
+	my %delta = %{$sccs->delta ($rev)};
+
+	printf STDERR "%-20s %3d %6s  %s\n", $fn, $rev, $vsn, pr_date ($delta{stamp});
+	open my $fh, ">", $fn          or die "Cannot write: $!";
+	print $fh scalar $sccs->body ($rev);
+	close  $fh;
+
+	system "git", "add", $fn;
+
+	# Do the git actions to put this file in git ...
+	my $mr   = $delta{mr} || ""; $mr =~ s/^-$//;
+	my $cmnt = $delta{comment} || "";
+	my $msg  = join ("; ", grep m/\S/, $mr, $cmnt) || "Checkin";
+	$msg .= "; rev $rev ($vsn) by $delta{committer}";
+	#$msg =~ s/\n/. /g;
+
+	system "git", "commit", "-m", $msg, $fn;
+	unlink $fn;
+	}
     }

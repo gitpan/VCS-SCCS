@@ -12,10 +12,8 @@ my %wm = (
     AUTHOR        =>   "H.Merijn Brand <h.m.brand\@xs4all.nl>",
     VERSION_FROM  =>   "SCCS.pm",
     ABSTRACT_FROM =>   "SCCS.pm",
-
-    dist	  => { COMPRESS	=> "gzip -9f",
-		       SUFFIX	=> ".gz",
-		       }
+    PREREQ_PM     => { Test::More   => 0 },
+    dist	  => { DIST_DEFAULT => "tgzdist" }, # I hate .tar.gz
     );
 $ExtUtils::MakeMaker::VERSION > 6.30 and $wm{LICENSE} = "perl";
 
@@ -32,5 +30,8 @@ sub postamble
 	'	cover -delete',
 	'	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test',
 	'	cover',
+	'',
+	'tgzdist:	$(DISTVNAME).tar.gz',
+	'	-@mv -f $(DISTVNAME).tar.gz $(DISTVNAME).tgz',
 	'';
     } # postamble
