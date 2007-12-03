@@ -5,7 +5,7 @@ use warnings;
 
 use File::Spec;
 #use Test::More "no_plan";
-use Test::More tests => 84;
+use Test::More tests => 82;
 
 BEGIN {
     use_ok ("VCS::SCCS");
@@ -60,14 +60,12 @@ is ($sccs->version (0),		"5.39",		"version (0)");
 is ($sccs->version (""),	"5.39",		"version ('')");
 is ($sccs->version (53),	"5.22",		"version (53)");
 is ($sccs->version (99),	undef,		"version (99)");
-is ($sccs->version (53, 0),	undef,		"version (53, 0)");
 is ($sccs->revision,		70,		"revision ()");
 is ($sccs->revision (undef),	70,		"revision (undef)");
 is ($sccs->revision (0),	70,		"revision (0)");
 is ($sccs->revision (""),	70,		"revision ('')");
 is ($sccs->revision ("5.38"),	69,		"revision ('5.38')");
 is ($sccs->revision ("9.99"),	undef,		"revision ('9.99')");
-is ($sccs->revision ("5.38",0),	undef,		"revision ('5.38', 0)");
 
 my $delta;
 ok ($delta = $sccs->delta,			"delta ()");

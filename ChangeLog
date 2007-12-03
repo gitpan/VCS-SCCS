@@ -1,3 +1,11 @@
+*** 0.09 Mon 03 Dec 2007 <h.m.brand@xs4all.nl>
+
+	- Found a "R" delta to test
+	- Checked a complete SCCS tree
+	- examples/sccs2git now applies in original order accross files and
+	  adds most usefull info from sccs
+	- More translate work
+
 *** 0.08 Mon 03 Dec 2007 <h.m.brand@xs4all.nl>
 
 	- /dev/null unknown on braindead OS's, skip to File::Spec->devnull ()

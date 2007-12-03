@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.08";
+$VERSION = "0.09";
 
 ### ###########################################################################
 
@@ -71,7 +71,7 @@ sub new
 
 	my ($type, $vsn, $v_r, $v_l, $v_b, $v_s,
 		   $date, $y, $m, $d, $time, $H, $M, $S,
-		   $user, $cur, $prv) =
+		   $user, $rev, $prv) =
 	    (shift (@delta) =~ m{
 		\cAd				# Delta
 		\s+ ([DR])			# Type	Delta/Remove?
@@ -86,14 +86,17 @@ sub new
 		}x);
 	$y += $y < 70 ? 2000 : 1900; # SCCS is not Y2k safe!
 
-	# We do not have "R" entries
-	$type eq "R" and warn ("Delta type R has never been tested!");
+	# Type R rev's are removed/overridden deltas:
+	# D 4.21 22 21
+	# D 4.20 21 19
+	# R 4.20 20 19
+	# D 4.19 19 18
 
 	my @mr   = grep { s/^\cAm\s*// } @delta; # MR number(s)
 	my @cmnt = grep { s/^\cAc\s*// } @delta; # Comment
 
-	$sccs{current} ||= [ $cur, $vsn, $v_r, $v_l, $v_b, $v_s ];
-	$sccs{delta}{$cur} = {
+	$sccs{current} ||= [ $rev, $vsn, $v_r, $v_l, $v_b, $v_s ];
+	$sccs{delta}{$rev} = {
 	    lines_ins	=> $l_ins,
 	    lines_del	=> $l_del,
 	    lines_unc	=> $l_unc,
@@ -114,8 +117,10 @@ sub new
 
 	    mr		=> join (", ", @mr),
 	    comment	=> join ("\n", @cmnt),
+
+	    prev_rev	=> $prv,
 	    };
-	$sccs{vsn}{$vsn} = $cur;
+	exists $sccs{vsn}{$vsn} or $sccs{vsn}{$vsn} = $rev;
 	$_ = <$fh>;
 	}
 
@@ -149,7 +154,7 @@ sub new
 
     # Body
     local $/ = undef;
-    $sccs{body} = [ split "\n", $_ . <$fh> ];
+    $sccs{body} = [ split m/\n/, $_ . <$fh> ];
     close $fh;
 
     return bless \%sccs, $class;
@@ -194,17 +199,16 @@ sub current
 
 sub delta
 {
-    my $self = shift;
+    my ($self, $rev) = @_;
     $self->{current} or return;
-    my $rev;
-    if (@_ == 0) {
+    if (!defined $rev) {
 	$rev = $self->{current}[0];
 	}
-    elsif (exists $self->{delta}{$_[0]}) {
-	$rev = $_[0];
+    elsif (exists $self->{delta}{$rev}) {
+	#$rev = $rev;
 	}
-    elsif (exists $self->{vsn}{$_[0]}) {
-	$rev = $self->{vsn}{$_[0]};
+    elsif (exists $self->{vsn}{$rev}) {
+	$rev = $self->{vsn}{$rev};
 	}
     else {
 	return;
@@ -214,16 +218,15 @@ sub delta
 
 sub version
 {
-    my $self = shift;
+    my ($self, $rev) = @_;
     ref $self eq __PACKAGE__ or return $VERSION;
     $self->{current}         or return;
 
     # $self->version () returns most recent version
-    my @args = @_       or return $self->{current}[1];
-    my $rev  = $args[0] or return $self->{current}[1];
+    $rev or return $self->{current}[1];
 
     # $self->revision (12) returns version for that revision
-    @args == 1 && exists $self->{delta}{$rev} and
+    exists $self->{delta}{$rev} and
 	return $self->{delta}{$rev}{version};
 
     return;
@@ -231,15 +234,14 @@ sub version
 
 sub revision
 {
-    my $self = shift;
+    my ($self, $vsn) = @_;
     $self->{current} or return;
 
     # $self->revision () returns most recent revision
-    my @args = @_       or return $self->{current}[0];
-    my $vsn  = $args[0] or return $self->{current}[0];
+    $vsn or return $self->{current}[0];
 
     # $self->revision (12) returns version for that revision
-    @args == 1 && exists $self->{vsn}{$vsn} and
+    exists $self->{vsn}{$vsn} and
 	return $self->{vsn}{$vsn};
 
     return;
@@ -257,22 +259,20 @@ sub revision_map
 
 my %tran = (
     SCCS	=> {	# Ducumentation only
-	"%W%"				=> "%Z%%M%\t%I%",
-	"%I%"				=> "%R%.%L%.%B%.%S%",
 	},
     RCS		=> {
-	"%W%[ \t]*%G%"			=> '$""Id""$',
-	"%W%[ \t]*%E%"			=> '$""Id""$',
-	"%W%"				=> '$""Id""$',
-	"%Z%%M%[ \t]*%I%[ \t]*%G%"	=> '$""SunId""$',
-	"%Z%%M%[ \t]*%I%[ \t]*%E%"	=> '$""SunId""$',
-	"%M%[ \t]*%I%[ \t]*%G%"		=> '$""Id""$',
-	"%M%[ \t]*%I%[ \t]*%E%"		=> '$""Id""$',
-	"%M%"				=> '$""RCSfile""$',
-	"%I%"				=> '$""Revision""$',
-	"%G%"				=> '$""Date""$',
-	"%E%"				=> '$""Date""$',
-	"%U%"				=> '',
+#	"%W%[ \t]*%G%"			=> '$""Id""$',
+#	"%W%[ \t]*%E%"			=> '$""Id""$',
+#	"%W%"				=> '$""Id""$',
+#	"%Z%%M%[ \t]*%I%[ \t]*%G%"	=> '$""SunId""$',
+#	"%Z%%M%[ \t]*%I%[ \t]*%E%"	=> '$""SunId""$',
+#	"%M%[ \t]*%I%[ \t]*%G%"		=> '$""Id""$',
+#	"%M%[ \t]*%I%[ \t]*%E%"		=> '$""Id""$',
+#	"%M%"				=> '$""RCSfile""$',
+#	"%I%"				=> '$""Revision""$',
+#	"%G%"				=> '$""Date""$',
+#	"%E%"				=> '$""Date""$',
+#	"%U%"				=> '',
 	},
     );
 
@@ -308,9 +308,14 @@ sub translate
 
     my $type = $self->{tran}    or return $line;
     exists $self->{delta}{$rev} or return $line;
-    
+
+    # TODO (or don't): %D%, %H%, %T%, %G%, %F%, %P%, %C%
     my %delta = %{$self->delta ($rev)};
-    my $I = join ".", grep { defined $_ } @delta{qw(release level branch sequence)};
+    my $I = $delta{version};
+    my $Z = "@(#)";
+    my $M = exists $self->{flags}{"m"} ? $self->{flags}{"m"} : $self->file ();
+    my $Q = exists $self->{flags}{"q"} ? $self->{flags}{"q"} : "";
+    my $Y = exists $self->{flags}{"t"} ? $self->{flags}{"t"} : "";
     $tran{SCCS}{"%U%"} = $delta{"time"};
     $tran{SCCS}{"%E%"} = $delta{"date"};
     $tran{SCCS}{"%R%"} = $delta{"release"};
@@ -318,8 +323,12 @@ sub translate
     $tran{SCCS}{"%B%"} = $delta{"branch"};
     $tran{SCCS}{"%S%"} = $delta{"sequence"};
     $tran{SCCS}{"%I%"} = $I;
-    $tran{SCCS}{"%W%"} = $I;
-	#"%W%"				=> "%Z%%M%\t%I%",
+    $tran{SCCS}{"%Z%"} = $Z;
+    $tran{SCCS}{"%M%"} = $M;
+    $tran{SCCS}{"%W%"} = "$Z$M\t$I";
+    $tran{SCCS}{"%A%"} = "$Z$Y $M $I$Z";
+    $tran{SCCS}{"%Q%"} = $Q;
+    $tran{SCCS}{"%Y%"} = $Y;
 
     unless (exists $tran{$type}{re}) {
 	my $kw = join "|", reverse sort keys %{$tran{$type}};
@@ -407,7 +416,7 @@ sub body
 	    next;
 	    }
 	if (m/^\cA(.*)/) {
-	    warn "Unsupported SCCS control: ^A$1, line skipped";
+	    carp "Unsupported SCCS control: ^A$1, line skipped";
 	    next;
 	    }
 	$w and push @body, $self->_tran ($_);
@@ -440,18 +449,22 @@ VCS::SCCS - OO Interface to SCCS files
  my @cr = $sccs->current ();         # ( 70, "5.39", 5, 39 )
 
  # Delta related
- my $xx = $sccs->delta (...);   -- NYI --
  my $vs = $sccs->version ();         # "5.39"
  my $vs = $sccs->version (69);       # "5.38"
  my $rv = $sccs->revision ();        # 70
  my $rv = $sccs->revision ("5.37");  # 68
  my $rm = $sccs->revision_map ();    # [ [ 1, "4.1" ], ... [ 70, "5.39" ]]
+ my $dd = $sccs->delta (17);         # none, revision or version as arg
 
  # Content related
  my $body_70 = $sccs->body ();       # file.pl @70 incl NL's
  my @body_70 = $sccs->body ();       # file.pl @70 list of chomped lines
  my @body_69 = $sccs->body (69);     # same for file.pl @96
  my @body_69 = $sccs->body ("5.38"); # same
+
+ $sccs->set_translate ("SCCS");
+ print $sccs->translate ($rev, $line);
+
  -- NYI --
  my $diff = $sccs->diff (67);        # unified diff between rev 67 and 70
  my $diff = $sccs->diff (63, "5.37");# unified diff between rev 63 and 68
@@ -589,11 +602,23 @@ and %S% for that release.
 
 =item set_translate (<type>)
 
-By default VCS::SCCS will not translate the SCCS keywords (like C<%W%>),
-see C<translate ()> for the full list. With C<set_translate ()>, you
-can select a translation type: C<SCCS> and C<RCS> are currently the
-only supported types, C<CVS> and C<GIT> are planned. Passing a false
-argument will reset translation to none.
+By default VCS::SCCS will not translate the SCCS keywords (like C<%W%>,
+see C<translate ()> for the full list). With C<set_translate ()>, you
+can select a translation type: C<SCCS> is currently the only supported
+type, C<CVS> and C<RCS> are planned. Passing a false argument will reset
+translation to none.
+
+You can also pass a hashref that will do custom translation:
+
+  my %trans = (
+    "%W%" => "This is my what id",
+    "%E%" => "Yesterday",
+    "%U%" => "Noon",
+    #...
+    };
+  $sccs->set_translate (\%tran);
+
+any missing keywords will not be translated.
 
 =back
 
@@ -828,6 +853,15 @@ non-HP-UX system program files.  %A% = %Z%%Y% %M% %I%%Z%
 
 =back
 
+For now, %D%, %H%, %T%, %G%, %F%, %P%, and %C% are not translated.
+I see no use for %D%, %H%, or %T%. People that use %G% have enough
+problems already, so they should be able to cope, %F% and %P% lose
+their meaning after conversion and %C% might be done later.
+
+If you convert from SCCS to git, it might be advisable to not do
+any translation at all, and leave the keywords in, just the way
+they are, and create a checkout hook.
+
 =back
 
 =head1 SPECIFICATION
@@ -840,19 +874,25 @@ manual page for sccsfile for HP-UX in doc/
 See the files in examples/ for my attempts to start convertors to
 other VCSs
 
-=head1 LIMITATIONS
+=head1 BUGS AND LIMITATIONS
 
 As this module is created as a base for conversion to more useful
 and robust VCSs, it is a read-only interface to the SCCS files.
 
+Translation is incomplete and might be questionable, but at least
+there is a workaround.
+
 =head1 TODO
 
  * improve documentation
- * implement delta () and diff ()
+ * implement diff ()
  * more tests
+ * autodetect the available VCS candidates for sccs2***
+ * sccs2git documentation and installation
+   move from single git commands to git-fast-import
+   http://www.kernel.org/pub/software/scm/git/docs/git-fast-import.html
  * sccs2rcs
  * sccs2cvs
- * sccs2git
  * sccs2hg
  * sccs2svn
  * errors and warnings
@@ -875,11 +915,13 @@ tests. I didn't get it to work.
 
 VCS - http://search.cpan.org/dist/VCS
 
+GIT - http://www.kernel.org/pub/software/scm/git/docs/
+
 =head1 AUTHOR
 
 H.Merijn Brand <h.m.brand@xs4all.nl>
 
-=head1 COPYRIGHT AND LICENSE
+=head1 LICENSE AND COPYRIGHT
 
 Copyright (C) 2007-2007 H.Merijn Brand
 
