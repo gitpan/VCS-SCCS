@@ -1,3 +1,10 @@
+*** 0.10 Wed 05 Dec 2007 <h.m.brand@xs4all.nl>
+
+	- examples/sccs2git-gfi uses git-fast-import (Sam Vilain)
+	- examples/sccs2git-add uses a file-by file approach
+	- win32 has strange ways of dealing with /dev/null^WFile::Spec->devnull ()
+	- Module itself now also under git :)
+
 *** 0.09 Mon 03 Dec 2007 <h.m.brand@xs4all.nl>
 
 	- Found a "R" delta to test

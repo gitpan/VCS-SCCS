@@ -39,7 +39,8 @@ e_is (qr{is empty},				"s.empty.c");
     chmod 0000, "s.empty.c";	# Might not be effective on Win32 or cygwin!
 e_is (qr{Cannot open|start with a checksum},	"s.empty.c");
     unlink "s.empty.c";
-e_is (qr{is not a file|does not exist},		File::Spec->devnull ());
+e_is (qr{is not a file|does not exist|nul is empty}, # Win32--
+						File::Spec->devnull ());
 e_is (qr{is not a file},			"files");
 e_is (qr{start with a checksum},		"Makefile");
 

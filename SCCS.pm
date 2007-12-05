@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.09";
+$VERSION = "0.10";
 
 ### ###########################################################################
 
@@ -889,8 +889,6 @@ there is a workaround.
  * more tests
  * autodetect the available VCS candidates for sccs2***
  * sccs2git documentation and installation
-   move from single git commands to git-fast-import
-   http://www.kernel.org/pub/software/scm/git/docs/git-fast-import.html
  * sccs2rcs
  * sccs2cvs
  * sccs2hg

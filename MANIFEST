@@ -5,7 +5,8 @@ README
 SCCS.pm
 doc/sccsfile.4
 doc/sccsfile.man
-examples/sccs2git
+examples/sccs2git-add
+examples/sccs2git-gfi
 files/SCCS/s.base.dta
 files/SCCS/s.tran.dta
 t/00_pod.t
