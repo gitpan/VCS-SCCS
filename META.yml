@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                VCS-SCCS
-version:             0.12
+version:             0.13
 abstract:            OO Interface to SCCS files
 license:             perl
 author:              
