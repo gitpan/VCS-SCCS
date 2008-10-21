@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.11";
+$VERSION = "0.12";
 
 ### ###########################################################################
 
@@ -309,11 +309,13 @@ sub translate
     my $type = $self->{tran}    or return $line;
     exists $self->{delta}{$rev} or return $line;
 
+    (my $def_M = $self->file ()) =~ s{.*/}{};
+
     # TODO (or don't): %D%, %H%, %T%, %G%, %F%, %P%, %C%
     my %delta = %{$self->delta ($rev)};
     my $I = $delta{version};
     my $Z = "@(#)";
-    my $M = exists $self->{flags}{"m"} ? $self->{flags}{"m"} : $self->file ();
+    my $M = exists $self->{flags}{"m"} ? $self->{flags}{"m"} : $def_M;
     my $Q = exists $self->{flags}{"q"} ? $self->{flags}{"q"} : "";
     my $Y = exists $self->{flags}{"t"} ? $self->{flags}{"t"} : "";
     $tran{SCCS}{"%U%"} = $delta{"time"};
@@ -440,7 +442,7 @@ VCS::SCCS - OO Interface to SCCS files
  my $sccs = VCS::SCCS->new ("SCCS/s.file.pl");   # Read and parse
 
  # Meta info
- my $fn = $sccs->file ();            # s.file.pl
+ my $fn = $sccs->file ();            # file.pl
  my $cs = $sccs->checksum ();        # 52534
  my @us = $sccs->users ();           # qw( merijn user )
  my $fl = $sccs->flags ();           # { q => "Test applic", v => undef }
@@ -627,7 +629,9 @@ any missing keywords will not be translated.
 =over 4
 
 =item delta
+
 =item delta (<revision>)
+
 =item delta (<version>)
 
 If called without argument, it returns the delta of the last revision
@@ -707,6 +711,7 @@ The comment as entered with this delta
 =back
 
 =item version
+
 =item version (<revision>)
 
 If called without argument, it returns the last version, just as
@@ -717,6 +722,7 @@ matches that revision. It returns undef if no matching version is
 found.
 
 =item revision
+
 =item revision (<version>)
 
 If called without argument, it returns the last revision, just as
@@ -738,7 +744,9 @@ anonymous lists).
 =over 4
 
 =item body
+
 =item body (<revision>)
+
 =item body (<version>)
 
 In scalar context returns the full body for the given revision.

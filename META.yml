@@ -1,11 +1,11 @@
 --- #YAML:1.0
 name:                VCS-SCCS
-version:             0.11
+version:             0.12
 abstract:            OO Interface to SCCS files
 license:             perl
 author:              
     - H.Merijn Brand <h.m.brand@xs4all.nl>
-generated_by:        ExtUtils::MakeMaker version 6.42
+generated_by:        ExtUtils::MakeMaker version 6.44
 distribution_type:   module
 requires:     
     Carp:                          0
