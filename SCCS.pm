@@ -1,6 +1,6 @@
 #!/pro/bin/perl
 
-# Copyright (c) 2007-2010 H.Merijn Brand.  All rights reserved.
+# Copyright (c) 2007-2011 H.Merijn Brand.  All rights reserved.
 
 package VCS::SCCS;
 
@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.17";
+$VERSION = "0.18";
 
 ### ###########################################################################
 
@@ -258,7 +258,7 @@ sub revision_map
     } # revision
 
 my %tran = (
-    SCCS	=> {	# Ducumentation only
+    SCCS	=> {	# Documentation only
 	},
     RCS		=> {
 #	"%W%[ \t]*%G%"			=> '$""Id""$',
@@ -578,13 +578,44 @@ File was given a list of releases to which deltas can no longer be made.
 
 File has a user defined value for the %Q% keyword.
 
-=item x
+=item s <line count>
 
-File was flagged to set execution bit on get.
+Defines the number of lines scanned for keyword expansion. Past that
+line, no keyword expansion takes place. Not implemented in all version.
+
+This flag is a SUN extension that does not exist in historic SCCS
+implementations and is completely ignored by C<VCS::SCCS>.
+
+=item x (HP-UX, SCO)
+
+File was flagged to set execution bit on get. This is the implementation
+that VCS::SCCS knows about.
+
+=item x SCHILY|0 (other)
+
+Enable SCCS extensions that are not implemented in classical SCCS
+variants. If the C<x> flag is enabled, the keywords %D%, %E%, %G%
+and %H% are expanded even though not explicitly enabled by the C<y>
+flag.
+
+This flag is a SCHILY extension that does not exist in historic SCCS
+implementations.
+
+=item y <val> ...
+
+The list of SCCS keywords to be expanded. If the C<y> flag is missing,
+all keywords are expanded. If the flag is present but the list is empty,
+no keyword is expanded and no "No id keywords" message is generated. The
+value C<*> controls the expansion of the %sccs.include.filename% keyword.
+
+This flag is a SUN/SCHILY extension that does not exist in historic SCCS
+implementations.
+
+This flag is currently ignored in C<VCS::SCCS>.
 
 =item z <reserved for use in interfaces>
 
-File was flagged to set execution bit on get.
+Used in Sun's NSE system.
 
 =back
 
@@ -851,7 +882,7 @@ The 4-character string @(#) @(#) recognizable by what (see what(1)).
 
 =item %W%
 
-A shorthand notation for constructing what(1) strings for HP?UX system
+A shorthand notation for constructing what(1) strings for HP-UX system
 program files.  %W%=%Z%%M%horizontal-tab%I%
 
 =item %A%
@@ -910,18 +941,34 @@ First errors, than diagnostics ...
 
 =head1 SEE ALSO
 
-SCCS - http://en.wikipedia.org/wiki/Source_Code_Control_System
+=over 2
 
-CSSC - https://sourceforge.net/projects/cssc
+=item SCCS
+
+source code at http://sccs.berlios.de/
+
+manual pages at http://sccs.berlios.de/man/index.html
+
+http://en.wikipedia.org/wiki/Source_Code_Control_System
+
+=item CSSC
+
+https://sourceforge.net/projects/cssc
 A GNU project that aims to be a drop-in replacement for SCCS. It is
 written in c++ and therefor disqualifies to be used at any older OS
 that does support SCCS but has no C++ compiler. And even if you have
 one, there is a good chance it won't build or does not bass the basic
 tests. I did not get it to work.
 
-VCS - http://search.cpan.org/dist/VCS
+=item VCS
 
-GIT - http://www.kernel.org/pub/software/scm/git/docs/
+http://search.cpan.org/dist/VCS
+
+=item GIT
+
+http://www.kernel.org/pub/software/scm/git/docs/
+
+=back
 
 =head1 AUTHOR
 
@@ -929,7 +976,7 @@ H.Merijn Brand <h.m.brand@xs4all.nl>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (C) 2007-2010 H.Merijn Brand
+Copyright (C) 2007-2011 H.Merijn Brand
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
