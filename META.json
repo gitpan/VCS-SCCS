@@ -14,7 +14,7 @@
       },
    "distribution_type" : "module",
    "generated_by" : "Author",
-   "version" : "0.19",
+   "version" : "0.20",
    "name" : "VCS-SCCS",
    "author" : [
       "H.Merijn Brand <h.m.brand@xs4all.nl>"
@@ -22,7 +22,7 @@
    "license" : "perl",
    "provides" : {
       "VCS::SCCS" : {
-         "version" : "0.19",
+         "version" : "0.20",
          "file" : "SCCS.pm"
          }
       },
