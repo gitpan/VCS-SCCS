@@ -1,6 +1,6 @@
 #!/pro/bin/perl
 
-# Copyright (c) 2007-2011 H.Merijn Brand.  All rights reserved.
+# Copyright (c) 2007-2013 H.Merijn Brand.  All rights reserved.
 
 package VCS::SCCS;
 
@@ -11,7 +11,7 @@ use POSIX  qw(mktime);
 use Carp;
 
 use vars qw( $VERSION );
-$VERSION = "0.20";
+$VERSION = "0.21";
 
 ### ###########################################################################
 
@@ -140,6 +140,7 @@ sub new
     # Flags
     # ^Af q Project name
     # ^Af v ...
+    # ^Af e 1
     while (m/^\cAf \s+ (\S) \s* (.+)?$/x) {
 	$sccs{flags}{$1} = $2;
 	$_ = <$fh>;
@@ -358,7 +359,7 @@ sub body
 
     $self->translate ($r, "");	# Initialize translate hash
 
-    my $w = 1;
+    my $want = 1;
     for (@{$self->{body}}) {
 	if (m/^\cAE\s+(\d+)$/) {
 	    my $e = $1;
@@ -404,26 +405,32 @@ sub body
 		splice @lvl, $x, 1;
 		last;
 		}
-	    $w = (grep { $_->[0] == 0 } @lvl) ? 0 : 1;
+	    $want = (grep { $_->[0] == 0 } @lvl) ? 0 : 1;
 	    next;
 	    }
 	if (m/^\cAI\s+(\d+)$/) {
 	    push @lvl, [ $r >= $1 ? 1 : 0, "I", $1 ];
-	    $w = (grep { $_->[0] == 0 } @lvl) ? 0 : 1;
+	    $want = (grep { $_->[0] == 0 } @lvl) ? 0 : 1;
 	    next;
 	    }
 	if (m/^\cAD\s+(\d+)$/) {
 	    push @lvl, [ $r >= $1 ? 0 : 1, "D", $1 ];
-	    $w = (grep { $_->[0] == 0 } @lvl) ? 0 : 1;
+	    $want = (grep { $_->[0] == 0 } @lvl) ? 0 : 1;
 	    next;
 	    }
 	if (m/^\cA(.*)/) {
 	    carp "Unsupported SCCS control: ^A$1, line skipped";
 	    next;
 	    }
-	$w and push @body, $self->_tran ($_);
-#	printf STDERR "%2d.%04d/%s: %-29.29s |%s\n", $r, scalar @body, $w, $v->(), $_;
+	$want and push @body, $self->_tran ($_);
+#	printf STDERR "%2d.%04d/%s: %-29.29s |%s\n", $r, scalar @body, $want, $v->(), $_;
 	}
+
+    if ($self->{flags}{e} && @body && $body[0] =~ m/^[\x20-\x60]{1,61}$/) {
+	my $body = unpack "u" => join "\n" => @body;
+	$body and @body = split m/\n/ => $body;
+	}
+
     return wantarray ? @body : join "\n", @body, "";
     } # body
 
@@ -976,7 +983,7 @@ H.Merijn Brand <h.m.brand@xs4all.nl>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (C) 2007-2011 H.Merijn Brand
+Copyright (C) 2007-2012 H.Merijn Brand
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

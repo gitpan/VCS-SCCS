@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright PROCURA B.V. (c) 2007-2011 H.Merijn Brand
+# Copyright PROCURA B.V. (c) 2007-2013 H.Merijn Brand
 
 require 5.006;
 
@@ -19,6 +19,8 @@ my %wm = (
 		       "Test::NoWarnings"	=> 0,
 		       },
 #   dist	  => { DIST_DEFAULT => "tgzdist" }, # I hate .tar.gz
+    macro         => { TARFLAGS => "--format=ustar -c -v -f",
+		       },
     );
 $ExtUtils::MakeMaker::VERSION > 6.30 and $wm{LICENSE} = "perl";
 

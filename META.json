@@ -1,42 +1,59 @@
 {
    "resources" : {
-      "repository" : "http://repo.or.cz/w/VCS-SCCS.git",
-      "license" : "http://dev.perl.org/licenses/"
+      "repository" : {
+         "web" : "http://repo.or.cz/w/VCS-SCCS.git",
+         "url" : "http://repo.or.cz/r/VCS-SCCS.git",
+         "type" : "git"
+         },
+      "license" : [
+         "http://dev.perl.org/licenses/"
+         ]
       },
    "meta-spec" : {
-      "version" : "2.0",
-      "url" : "https://metacpan.org/module/CPAN::Meta::Spec?#meta-spec"
+      "version" : "2",
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec"
       },
-   "test_requires" : {
-      "Test::More" : "0",
-      "Test::Harness" : "0",
-      "Test::NoWarnings" : "0"
-      },
-   "distribution_type" : "module",
    "generated_by" : "Author",
-   "version" : "0.20",
+   "version" : "0.21",
    "name" : "VCS-SCCS",
    "author" : [
       "H.Merijn Brand <h.m.brand@xs4all.nl>"
       ],
-   "license" : "perl",
+   "dynamic_config" : 1,
+   "license" : [
+      "perl_5"
+      ],
+   "prereqs" : {
+      "test" : {
+         "requires" : {
+            "Test::Harness" : "0",
+            "Test::More" : "0",
+            "Test::NoWarnings" : "0"
+            }
+         },
+      "runtime" : {
+         "requires" : {
+            "perl" : "5.006",
+            "POSIX" : "0",
+            "File::Spec" : "0",
+            "Carp" : "0"
+            },
+         "recommends" : {
+            "perl" : "5.018000"
+            }
+         },
+      "configure" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+            }
+         }
+      },
    "provides" : {
       "VCS::SCCS" : {
-         "version" : "0.20",
+         "version" : "0.21",
          "file" : "SCCS.pm"
          }
       },
-   "requires" : {
-      "perl" : "5.006",
-      "POSIX" : "0",
-      "File::Spec" : "0",
-      "Carp" : "0"
-      },
-   "recommends" : {
-      "perl" : "5.014001"
-      },
    "abstract" : "OO Interface to SCCS files",
-   "configure_requires" : {
-      "ExtUtils::MakeMaker" : "0"
-      }
+   "release_status" : "stable"
    }
