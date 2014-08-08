@@ -40,12 +40,16 @@ my $mark;
 
 # use a best guess at user, hostname, etc.  FIXME: add authors map :)
 use Time::Local;
-my $domain = "procura.nl";
+use Net::Domain;
+my $domain = Net::Domain::hostdomain () || "procura.nl";
 my %tzoffset;
 my $tzoffset = sub {
+    use integer;
     my $offset_s = timegm (localtime ($_[0])) - $_[0];
+    my $off = abs $offset_s / 60;
+    my ($off_h, $off_m) = ($off / 60, $off % 60);
     $tzoffset{$offset_s} ||= ( $offset_s >= 0 ? "+" : "-" )
-	. sprintf "%.4d", abs $offset_s;
+	. sprintf "%02d%02d", $off_h, $off_m;
     };
 
 # Submit in the same sequence as the original
@@ -73,7 +77,8 @@ foreach my $f (sort @sccs) {
 	print { $gfi } "blob\nmark :", $mark,
 			   "\ndata ", length ($data),
 			   "\n", $data, "\n";
-	printf STDERR "%-20s %3d %8s  %s\r", $fn, $rev, $vsn, pr_date ($delta->{stamp});
+	printf STDERR "%-20s %3d %8s  %s\r", $fn, $rev, $vsn,
+	    pr_date ($delta->{stamp});
 	}
     print STDERR "\n";
     }
@@ -90,9 +95,9 @@ foreach my $c (sort keys %sccs) {
 	$stamp, $delta{date}, $delta{"time"};
 
     print { $gfi } "commit ", $branchname, "\n";
-    print { $gfi } "committer ", $delta{committer}, " <",
-	    ($delta{committer}, "@", $domain, "> ", $delta{stamp},
-	     " ", $tzoffset->($delta{stamp}), "\n");
+    print { $gfi } "committer ", $delta{committer},
+	" <", $delta{committer}, "@", $domain, "> ",
+	$delta{stamp}, " ", $tzoffset->($delta{stamp}), "\n";
 
     # tradition is to save all potentially useful but
     # uncategorized metadata as RFC822-style headers in the commit
@@ -116,7 +121,7 @@ print { $gfi } "checkpoint\n";
 
 close $gfi;
 
-system "git-checkout";
+system "git", "checkout";
 system "git", "reset", "--hard";
 
 open my $gi, ">", ".gitignore";

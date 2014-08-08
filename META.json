@@ -1,59 +1,61 @@
 {
+   "generated_by" : "Author",
+   "dynamic_config" : 1,
+   "release_status" : "stable",
+   "name" : "VCS-SCCS",
    "resources" : {
-      "repository" : {
-         "web" : "http://repo.or.cz/w/VCS-SCCS.git",
-         "url" : "http://repo.or.cz/r/VCS-SCCS.git",
-         "type" : "git"
-         },
       "license" : [
          "http://dev.perl.org/licenses/"
-         ]
-      },
+      ],
+      "repository" : {
+         "web" : "http://repo.or.cz/w/VCS-SCCS.git",
+         "type" : "git",
+         "url" : "http://repo.or.cz/r/VCS-SCCS.git"
+      }
+   },
+   "author" : [
+      "H.Merijn Brand <h.m.brand@xs4all.nl>"
+   ],
+   "version" : "0.22",
+   "abstract" : "OO Interface to SCCS files",
    "meta-spec" : {
       "version" : "2",
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec"
-      },
-   "generated_by" : "Author",
-   "version" : "0.21",
-   "name" : "VCS-SCCS",
-   "author" : [
-      "H.Merijn Brand <h.m.brand@xs4all.nl>"
-      ],
-   "dynamic_config" : 1,
-   "license" : [
-      "perl_5"
-      ],
+   },
    "prereqs" : {
-      "test" : {
-         "requires" : {
-            "Test::Harness" : "0",
-            "Test::More" : "0",
-            "Test::NoWarnings" : "0"
-            }
-         },
       "runtime" : {
          "requires" : {
             "perl" : "5.006",
+            "Carp" : "0",
             "POSIX" : "0",
-            "File::Spec" : "0",
-            "Carp" : "0"
-            },
-         "recommends" : {
-            "perl" : "5.018000"
-            }
+            "File::Spec" : "0"
          },
+         "recommends" : {
+            "perl" : "5.018001"
+         }
+      },
       "configure" : {
          "requires" : {
             "ExtUtils::MakeMaker" : "0"
-            }
          }
       },
+      "test" : {
+         "recommends" : {
+            "Test::More" : "1.001003"
+         },
+         "requires" : {
+            "Test::More" : "0",
+            "Test::NoWarnings" : "0"
+         }
+      }
+   },
+   "license" : [
+      "perl_5"
+   ],
    "provides" : {
       "VCS::SCCS" : {
-         "version" : "0.21",
-         "file" : "SCCS.pm"
-         }
-      },
-   "abstract" : "OO Interface to SCCS files",
-   "release_status" : "stable"
+         "file" : "SCCS.pm",
+         "version" : "0.22"
+      }
    }
+}
